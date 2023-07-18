@@ -43,4 +43,4 @@ def vectorize_image():
 
 if __name__ == '__main__':
     app.run()
-    app.run(port=5000,host='13.127.185.1',debug=True)
+    app.run(port=5000,host='13.127.185.1',debug=False)
