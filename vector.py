@@ -1,24 +1,14 @@
-import torch
-import torchvision.models as models
-import torchvision.transforms as transforms
-from PIL import Image
-from io import BytesIO
+import numpy as np
 import requests
+from skimage import io
+from skimage.transform import resize
+from sklearn.preprocessing import normalize
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Carregar o modelo ResNet pré-treinado
-modelo_resnet = models.resnet50(pretrained=True)
-modelo_resnet.eval()
-
-# Definir transformações de pré-processamento
-transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
+# Carregar o modelo pré-treinado (opcional)
+# model = ...
 
 # Rota para receber a URL da imagem e retornar o vetor
 @app.route('/vectorize', methods=['POST'])
@@ -29,18 +19,18 @@ def vectorize_image():
 
     image_url = request.json['url']
 
-    # Carregar e pré-processar a imagem
-    response = requests.get(image_url)
-    image = Image.open(BytesIO(response.content))
-    image = transform(image)
-    image = image.unsqueeze(0)
+    # Obter a imagem da URL
+    img = io.imread(image_url)
+    img = resize(img, (224, 224), anti_aliasing=True)  # Redimensionar a imagem para o tamanho esperado
 
-    # Obter o vetor de características da imagem
-    vetor_caracteristicas = modelo_resnet(image)
-    vetor_caracteristicas = torch.flatten(vetor_caracteristicas).detach().numpy()
+    # Converter a imagem para vetor e normalizar
+    vector = img.flatten()
+    vector = normalize(vector.reshape(1, -1))
+    vector = np.squeeze(vector)[:1500]
+    # Obter o vetor de características da imagem usando o modelo pré-treinado (opcional)
+    # features = model.predict(vector)
 
-    return jsonify({'vector': vetor_caracteristicas.tolist()})
+    return jsonify({'vector': vector.tolist()})
 
 if __name__ == '__main__':
-    app.run()
-    app.run(port=5000,host='13.127.185.1',debug=False)
+    app.run(host='0.0.0.0', port=5000)
